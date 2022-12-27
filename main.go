@@ -26,7 +26,7 @@ var (
 )
 
 func dbconn() (*sql.DB, error) {
-	db, err := sql.Open("mysql", "root:M@etroboomin50@tcp(localhost:8889)/coldfinance")
+	db, err := sql.Open("mysql", "root:M@etroboomin50@tcp(localhost:3306)/coldfinance")
 	if err != nil {
 		log.Print(err)
 		return nil, err
@@ -56,7 +56,7 @@ func createAccount(username string, password string, email string, location stri
 	return false, errors.New(ErrCreatingUser)
 }
 
-func getUsers() (*[]User, error) {
+func getUsers() (interface{}, error) {
 	dbc, err := dbconn()
 	if err != nil {
 		log.Print(err.Error())
@@ -77,6 +77,9 @@ func getUsers() (*[]User, error) {
 			return nil, err
 		}
 	}
+	if suser.Id == 0 {
+		return []struct{}{}, errors.New("no users")
+	}
 	auser = append(auser, suser)
 	return &auser, nil
 }
@@ -90,11 +93,7 @@ func getAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-	conn, err := dbconn()
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
+	log.Print("reg reached here ...")
 	bcryptpwd, err := bcrypt.GenerateFromPassword([]byte(r.FormValue("password")), 14)
 	if err != nil {
 		log.Print(err)
@@ -102,22 +101,11 @@ func register(w http.ResponseWriter, r *http.Request) {
 	}
 	verified, _ := strconv.Atoi(r.FormValue("verified"))
 	reg, err := createAccount(r.FormValue("username"), string(bcryptpwd), r.FormValue("email"), r.FormValue("location"), verified)
-	if err != nil {
+	if err != nil || !reg {
 		log.Print(err.Error())
 		return
 	}
-	if reg {
-		var val User
-		fetchuser := conn.QueryRow("select * from users where email = ?", r.FormValue("email")).Scan(val)
-		if fetchuser != nil {
-			log.Print(err.Error())
-			return
-		}
-		generateUser := User{val.Id, val.Username, val.Password, val.EmailAdd, val.Location, val.Verified}
-		json.NewEncoder(w).Encode(generateUser)
-		return
-	}
-	json.NewEncoder(w).Encode(ErrCreatingUser)
+	json.NewEncoder(w).Encode("account created successfully!")
 }
 
 func main() {
