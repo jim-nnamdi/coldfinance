@@ -5,4 +5,4 @@ This is the official backend of the coldfinance platform, basically we aim to bu
 Golang and React(Typescript)
 
 # Copyright
-:copy: info@coldfinance.co
+All rights reserved &copy; info@coldfinance.co
