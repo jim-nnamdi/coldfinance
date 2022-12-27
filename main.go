@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -40,6 +41,27 @@ func createAccount(username string, password string, email string, location stri
 		log.Print(err.Error())
 		return false, err
 	}
+
+	// check for duplicates
+	dup, err := dbc.Query("select * from users where email = ?", email)
+	if err != nil {
+		log.Print(err.Error())
+		return false, err
+	}
+	suser := User{}
+	for dup.Next() {
+		if err = dup.Scan(&suser.Id, &suser.Username, &suser.Password, &suser.EmailAdd, &suser.Location, &suser.Verified); err != nil {
+			log.Print(err.Error())
+			return false, err
+		}
+	}
+
+	// checks for email and username duplicates
+	if suser.EmailAdd == email || suser.Username == username {
+		fmt.Println("user already exists")
+		return false, errors.New("this user already exists")
+	}
+
 	res, err := dbc.Exec("insert into users(username, password, email, location, verified) values(?,?,?,?,?)", username, password, email, location, verified)
 	if err != nil {
 		log.Print(err.Error())
@@ -56,7 +78,7 @@ func createAccount(username string, password string, email string, location stri
 	return false, errors.New(ErrCreatingUser)
 }
 
-func getUsers() (interface{}, error) {
+func getUsers() ([]User, error) {
 	dbc, err := dbconn()
 	if err != nil {
 		log.Print(err.Error())
@@ -76,12 +98,9 @@ func getUsers() (interface{}, error) {
 			log.Print(err.Error())
 			return nil, err
 		}
+		auser = append(auser, suser)
 	}
-	if suser.Id == 0 {
-		return []struct{}{}, errors.New("no users")
-	}
-	auser = append(auser, suser)
-	return &auser, nil
+	return auser, nil
 }
 
 func getAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +121,9 @@ func register(w http.ResponseWriter, r *http.Request) {
 	verified, _ := strconv.Atoi(r.FormValue("verified"))
 	reg, err := createAccount(r.FormValue("username"), string(bcryptpwd), r.FormValue("email"), r.FormValue("location"), verified)
 	if err != nil || !reg {
+		if err.Error() == "this user already exists" {
+			json.NewEncoder(w).Encode(err.Error())
+		}
 		log.Print(err.Error())
 		return
 	}
