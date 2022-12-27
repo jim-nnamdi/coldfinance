@@ -8,8 +8,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -169,14 +171,7 @@ func getUserByEmailAndPassword(email string, password string) (*User, error) {
 }
 
 func loginUser(email string, password string) (bool, error) {
-	dbx, err := dbconn()
-	if err != nil {
-		log.Print(err.Error())
-		return false, err
-	}
-
-	// select this user from db
-	// if not exists throw error
+	// check and convert password
 	dbhash, err := getUserPwdHash(email)
 	if err != nil {
 		log.Printf("cannot fetch user password: %s", string(dbhash))
@@ -216,9 +211,41 @@ func register(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode("account created successfully!")
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	userlogin, err := loginUser(r.FormValue("email"), r.FormValue("password"))
+	if err != nil || !userlogin {
+		log.Printf("error logging in with %s and %s", r.FormValue("email"), r.FormValue("password"))
+		return
+	}
+
+	// we need to auth the user using jwt
+	expires := time.Now().Add(time.Hour)
+	type ToEncode struct {
+		Email string `json:"email"`
+		jwt.StandardClaims
+	}
+	dataEncode := ToEncode{
+		Email: r.FormValue("email"),
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expires.Unix(),
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "coldfinance",
+		},
+	}
+	claims := jwt.MapClaims{}
+	tokenstring := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err := tokenstring.SignedString(dataEncode)
+	if err != nil {
+		log.Printf("failed to generate token: %v", tokenstring)
+		return
+	}
+	json.NewEncoder(w).Encode(token)
+}
+
 func main() {
 	log.Print("server running on 9900 ...")
 	http.HandleFunc("/users", getAllUsers)
 	http.HandleFunc("/register", register)
+	http.HandleFunc("/login", login)
 	http.ListenAndServe(":9900", nil)
 }
