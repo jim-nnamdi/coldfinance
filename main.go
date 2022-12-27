@@ -111,6 +111,92 @@ func getAllUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(x)
 }
 
+func convertpassword(hash []byte, password string) (bool, error) {
+	cnvtpass := bcrypt.CompareHashAndPassword(hash, []byte(password))
+	if cnvtpass != nil {
+		return false, cnvtpass
+	}
+	return true, nil
+}
+
+func getUserPwdHash(email string) ([]byte, error) {
+	var (
+		user = User{}
+		err  error
+	)
+	dbx, err := dbconn()
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	res := dbx.QueryRow("select * from users where email = ?", email)
+	if err = res.Scan(
+		&user.Id,
+		&user.Username,
+		&user.Password,
+		&user.EmailAdd,
+		&user.Location,
+		&user.Verified,
+	); err != nil {
+		log.Print(err)
+		return nil, err
+	}
+	return []byte(user.Password), nil
+}
+
+func getUserByEmailAndPassword(email string, password string) (*User, error) {
+	var (
+		user = User{}
+	)
+	dbx, err := dbconn()
+	if err != nil {
+		log.Printf("no connection: %v", dbx)
+		return nil, err
+	}
+	req := dbx.QueryRow("select * from users where email = ?")
+	if err = req.Scan(
+		&user.Id,
+		&user.Username,
+		&user.Password,
+		&user.EmailAdd,
+		&user.Location,
+		&user.Verified,
+	); err != nil {
+		log.Printf("cannot scan rows: %s", err)
+		return nil, err
+	}
+	return &user, nil
+}
+
+func loginUser(email string, password string) (bool, error) {
+	dbx, err := dbconn()
+	if err != nil {
+		log.Print(err.Error())
+		return false, err
+	}
+
+	// select this user from db
+	// if not exists throw error
+	dbhash, err := getUserPwdHash(email)
+	if err != nil {
+		log.Printf("cannot fetch user password: %s", string(dbhash))
+		return false, err
+	}
+
+	// check & convert hashed password
+	convert_password, err := convertpassword(dbhash, password)
+	if err != nil || !convert_password {
+		log.Printf("cannot convert password for user: %s", string(dbhash))
+		return false, err
+	}
+	userdata, err := getUserByEmailAndPassword(email, string(dbhash))
+	if err != nil || userdata == nil {
+		log.Printf("cannot login user using: %s", email)
+		return false, err
+	}
+	return true, nil
+}
+
 func register(w http.ResponseWriter, r *http.Request) {
 	log.Print("reg reached here ...")
 	bcryptpwd, err := bcrypt.GenerateFromPassword([]byte(r.FormValue("password")), 14)
