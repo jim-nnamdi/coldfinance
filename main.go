@@ -106,11 +106,13 @@ func getUsers() ([]User, error) {
 }
 
 func getAllUsers(w http.ResponseWriter, r *http.Request) {
-	x, err := getUsers()
+	allusers, err := getUsers()
 	if err != nil {
 		log.Print(err)
+		return
 	}
-	json.NewEncoder(w).Encode(x)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(allusers)
 }
 
 func convertpassword(hash []byte, password string) (bool, error) {
@@ -155,7 +157,7 @@ func getUserByEmailAndPassword(email string, password string) (*User, error) {
 		log.Printf("no connection: %v", dbx)
 		return nil, err
 	}
-	req := dbx.QueryRow("select * from users where email = ?")
+	req := dbx.QueryRow("select * from users where email = ?", email)
 	if err = req.Scan(
 		&user.Id,
 		&user.Username,
@@ -208,10 +210,14 @@ func register(w http.ResponseWriter, r *http.Request) {
 		log.Print(err.Error())
 		return
 	}
+	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("account created successfully!")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
+	var (
+		jwt_secret = []byte("Metroboominx")
+	)
 	userlogin, err := loginUser(r.FormValue("email"), r.FormValue("password"))
 	if err != nil || !userlogin {
 		log.Printf("error logging in with %s and %s", r.FormValue("email"), r.FormValue("password"))
@@ -232,14 +238,20 @@ func login(w http.ResponseWriter, r *http.Request) {
 			Issuer:    "coldfinance",
 		},
 	}
-	claims := jwt.MapClaims{}
-	tokenstring := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := tokenstring.SignedString(dataEncode)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, dataEncode)
+	token_string, err := token.SignedString(jwt_secret)
 	if err != nil {
-		log.Printf("failed to generate token: %v", tokenstring)
+		log.Printf("failed to generate token: %s", err)
 		return
 	}
-	json.NewEncoder(w).Encode(token)
+	http.SetCookie(w, &http.Cookie{
+		Name:    "coldfinance-user",
+		Value:   token_string,
+		Expires: time.Now().Add(60 * time.Minute),
+	})
+
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(token_string)
 }
 
 func main() {
