@@ -8,9 +8,12 @@ import (
 	"github.com/jim-nnamdi/coldfinance/backend/admin"
 	"github.com/jim-nnamdi/coldfinance/backend/content"
 	"github.com/jim-nnamdi/coldfinance/backend/users"
+	"github.com/jim-nnamdi/coldfinance/helper"
 )
 
 func main() {
+
+	helper.GetIpAddress()
 	log.Print("server running on 9900 ...")
 	r := http.NewServeMux()
 	r.HandleFunc("/users", users.GetAllUsers)
