@@ -17,7 +17,7 @@ func main() {
 	r.HandleFunc("/login", users.Login)
 
 	r.HandleFunc("/posts", content.GetAllPosts)
-	r.HandleFunc("/{slug}", content.GetPost)
+	r.HandleFunc("/post", content.GetPost)
 	r.HandleFunc("/add/post", content.AddNewPost)
 	err := http.ListenAndServe(":9900", r)
 	if err != nil {
