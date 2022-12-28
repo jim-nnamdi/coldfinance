@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jim-nnamdi/coldfinance/backend/admin"
 	"github.com/jim-nnamdi/coldfinance/backend/content"
 	"github.com/jim-nnamdi/coldfinance/backend/users"
 )
@@ -19,6 +20,8 @@ func main() {
 	r.HandleFunc("/posts", content.GetAllPosts)
 	r.HandleFunc("/post", content.GetPost)
 	r.HandleFunc("/add/post", content.AddNewPost)
+
+	r.HandleFunc("/admin", admin.GetAllData)
 	err := http.ListenAndServe(":9900", r)
 	if err != nil {
 		log.Fatal(err)
