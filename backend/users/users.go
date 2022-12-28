@@ -1,6 +1,7 @@
 package users
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -220,9 +221,6 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	var (
-		jwt_secret = []byte("Metroboominx")
-	)
 	userlogin, err := LoginUser(r.FormValue("email"), r.FormValue("password"))
 	if err != nil || !userlogin {
 		log.Printf("error logging in with %s and %s", r.FormValue("email"), r.FormValue("password"))
@@ -242,6 +240,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			IssuedAt:  time.Now().Unix(),
 			Issuer:    "coldfinance",
 		},
+	}
+
+	jwt_secret, err := hex.DecodeString("13d6b4dff8f84a10851021ec8608f814570d562c92fe6b5ec4c9f595bcb3234b")
+	if err != nil {
+		connection.Coldfinancelog().Debug("could not decode string")
+		return
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, dataEncode)
 	token_string, err := token.SignedString(jwt_secret)

@@ -4,17 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"runtime"
 	"strings"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jim-nnamdi/coldfinance/backend/connection"
 
 	"go.uber.org/zap"
 )
 
+var pool redis.Pool
+
 type Post interface {
 	GetPosts() ([]Postx, error)
 	GetSinglePost(slug string) (*Postx, error)
-	AddPost() (bool, error)
+	AddPost(title string, body string, author string) (bool, error)
 }
 
 type Postx struct {
@@ -111,6 +115,18 @@ func GetAllPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetPost(w http.ResponseWriter, r *http.Request) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	pool = redis.Pool{
+		MaxIdle:   50,
+		MaxActive: 500, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", ":6379")
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	}
 	slug := r.URL.Query().Get("slug")
 	singlepost, err := GetSinglePost(slug)
 	if err != nil || singlepost == nil {

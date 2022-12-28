@@ -5,11 +5,15 @@ import (
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jim-nnamdi/coldfinance/backend/admin"
 	"github.com/jim-nnamdi/coldfinance/backend/content"
 	"github.com/jim-nnamdi/coldfinance/backend/users"
+	"github.com/jim-nnamdi/coldfinance/helper"
 )
 
 func main() {
+
+	helper.GetIpAddress()
 	log.Print("server running on 9900 ...")
 	r := http.NewServeMux()
 	r.HandleFunc("/users", users.GetAllUsers)
@@ -19,6 +23,8 @@ func main() {
 	r.HandleFunc("/posts", content.GetAllPosts)
 	r.HandleFunc("/post", content.GetPost)
 	r.HandleFunc("/add/post", content.AddNewPost)
+
+	r.HandleFunc("/admin", admin.GetAllData)
 	err := http.ListenAndServe(":9900", r)
 	if err != nil {
 		log.Fatal(err)
