@@ -27,12 +27,13 @@ type UserInterface interface {
 }
 
 type User struct {
-	Id       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	EmailAdd string `json:"email"`
-	Location string `json:"location"`
-	Verified int    `json:"verified"`
+	Id            int    `json:"id"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	EmailAdd      string `json:"email"`
+	Location      string `json:"location"`
+	Verified      int    `json:"verified"`
+	WalletBalance int    `json:"walletbalance"`
 }
 
 func NewUser(id int, username string, password string, emailaddress string, location string, verified int) *User {
@@ -60,7 +61,15 @@ func CreateAccount(username string, password string, email string, location stri
 	}
 	suser := User{}
 	for dup.Next() {
-		if err = dup.Scan(&suser.Id, &suser.Username, &suser.Password, &suser.EmailAdd, &suser.Location, &suser.Verified); err != nil {
+		if err = dup.Scan(
+			&suser.Id,
+			&suser.Username,
+			&suser.Password,
+			&suser.EmailAdd,
+			&suser.Location,
+			&suser.Verified,
+			&suser.WalletBalance,
+		); err != nil {
 			log.Print(err.Error())
 			return false, err
 		}
@@ -72,7 +81,7 @@ func CreateAccount(username string, password string, email string, location stri
 		return false, errors.New("this user already exists")
 	}
 
-	res, err := dbc.Exec("insert into users(username, password, email, location, verified) values(?,?,?,?,?)", username, password, email, location, verified)
+	res, err := dbc.Exec("insert into users(username, password, email, location, verified, walletbalance) values(?,?,?,?,?,?)", username, password, email, location, verified, 0)
 	if err != nil {
 		log.Print(err.Error())
 		return false, err
@@ -98,7 +107,7 @@ func GetUsers() ([]User, error) {
 	suser := User{}
 	auser := make([]User, 0)
 	for res.Next() {
-		err := res.Scan(&suser.Id, &suser.Username, &suser.Password, &suser.EmailAdd, &suser.Location, &suser.Verified)
+		err := res.Scan(&suser.Id, &suser.Username, &suser.Password, &suser.EmailAdd, &suser.Location, &suser.Verified, &suser.WalletBalance)
 		if err != nil {
 			log.Print(err.Error())
 			return nil, err
@@ -139,6 +148,7 @@ func GetUserPwdHash(email string) ([]byte, error) {
 		&user.EmailAdd,
 		&user.Location,
 		&user.Verified,
+		&user.WalletBalance,
 	); err != nil {
 		log.Print(err)
 		return nil, err
@@ -159,6 +169,7 @@ func GetUserByEmailAndPassword(email string, password string) (*User, error) {
 		&user.EmailAdd,
 		&user.Location,
 		&user.Verified,
+		&user.WalletBalance,
 	); err != nil {
 		log.Printf("cannot scan rows: %s", err)
 		return nil, err

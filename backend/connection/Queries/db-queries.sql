@@ -3,3 +3,5 @@ CREATE TABLE IF NOT EXISTS users(id int PRIMARY KEY AUTO_INCREMENT, username TEX
 CREATE TABLE IF NOT EXISTS posts(id int PRIMARY KEY AUTO_INCREMENT, title TEXT, body LONGTEXT, slug TEXT, author TEXT, image TEXT);
 
 ALTER TABLE posts ADD approved int(0);
+
+ALTER TABLE users ADD walletbalance bigint(50);

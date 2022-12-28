@@ -11,11 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// type Post interface {
-// 	GetPosts() ([]Posts, error)
-// 	GetSinglePost(slug string) (*Posts, error)
-// 	AddPost() (bool, error)
-// }
+type Post interface {
+	GetPosts() ([]Postx, error)
+	GetSinglePost(slug string) (*Postx, error)
+	AddPost() (bool, error)
+}
 
 type Postx struct {
 	Id       int    `json:"id"`
@@ -42,7 +42,15 @@ func GetPosts() ([]Postx, error) {
 	spost := Postx{}
 	apost := make([]Postx, 0)
 	for res.Next() {
-		err := res.Scan(&spost.Id, &spost.Title, &spost.Body, &spost.Slug, &spost.Author, &spost.Image, &spost.Approved)
+		err := res.Scan(
+			&spost.Id,
+			&spost.Title,
+			&spost.Body,
+			&spost.Slug,
+			&spost.Author,
+			&spost.Image,
+			&spost.Approved,
+		)
 		if err != nil {
 			log.Print(err.Error())
 			return nil, err
