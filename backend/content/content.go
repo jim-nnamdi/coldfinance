@@ -40,7 +40,14 @@ func GetPosts() ([]Posts, error) {
 	spost := Posts{}
 	allPosts := make([]Posts, 0)
 	for posts.Next() {
-		if err := posts.Scan(&spost.Id, &spost.Title, &spost.Body, &spost.Slug, &spost.Author, &spost.Image); err != nil {
+		if err := posts.Scan(
+			&spost.Id,
+			&spost.Title,
+			&spost.Body,
+			&spost.Slug,
+			&spost.Author,
+			&spost.Image,
+		); err != nil {
 			coldfinancelog.Debug("cannot scan rows for posts", zap.String("error", err.Error()))
 			return nil, err
 		}
@@ -70,4 +77,17 @@ func GetSinglePost(slug string) (*Posts, error) {
 	return &postmodel, nil
 }
 
-func AddPost() (bool, error)
+func AddPost(title string, body string, slug string, author string) (bool, error) {
+	addpost, err := conn.Exec("insert into post(title, body, slug, author)", title, body, slug, author)
+	if err != nil {
+		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
+		return false, err
+	}
+	newpost, err := addpost.LastInsertId()
+	if err != nil || newpost == 0 {
+		coldfinancelog.Debug("error adding post", zap.Any("error", err))
+		return false, err
+	}
+	coldfinancelog.Info("new post created!")
+	return true, nil
+}
