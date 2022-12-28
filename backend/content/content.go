@@ -1,8 +1,12 @@
 package content
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/jim-nnamdi/coldfinance/backend/connection"
 	"go.uber.org/zap"
 )
@@ -78,7 +82,7 @@ func GetSinglePost(slug string) (*Posts, error) {
 }
 
 func AddPost(title string, body string, slug string, author string) (bool, error) {
-	addpost, err := conn.Exec("insert into post(title, body, slug, author)", title, body, slug, author)
+	addpost, err := conn.Exec("insert into posts(title, body, slug, author) values(?,?,?,?)", title, body, slug, author)
 	if err != nil {
 		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
 		return false, err
@@ -90,4 +94,39 @@ func AddPost(title string, body string, slug string, author string) (bool, error
 	}
 	coldfinancelog.Info("new post created!")
 	return true, nil
+}
+
+func GetAllPosts(w http.ResponseWriter, r *http.Request) {
+	allposts, err := GetPosts()
+	if err != nil {
+		coldfinancelog.Debug("cannot fetch posts", zap.Any("error", err))
+		return
+	}
+	if allposts != nil {
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(allposts)
+	}
+}
+
+func GetPost(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	singlepost, err := GetSinglePost(r.FormValue("slug"))
+	if err != nil {
+		coldfinancelog.Debug("cannot fetch post with slug", zap.Any("error", err))
+		return
+	}
+	if singlepost != nil {
+		w.Header().Add("Content-Type", "application/json")
+		fmt.Fprintf(w, "slug: %v\n", vars["slug"])
+	}
+}
+
+func AddNewPost(w http.ResponseWriter, r *http.Request) {
+	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("slug"), r.FormValue("author"))
+	if err != nil || !newpost {
+		coldfinancelog.Debug("cannot add new post", zap.Any("error", err))
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("new post added successfully!")
 }
