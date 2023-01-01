@@ -31,8 +31,7 @@ func allstocksdata(w http.ResponseWriter, r *http.Request) {
 		connection.Coldfinancelog().Debug("error", zap.Any("error", err))
 		return
 	}
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stocks)
+	DataResponse(w, stocks)
 }
 
 func singleStockData(w http.ResponseWriter, r *http.Request) {
@@ -42,8 +41,7 @@ func singleStockData(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("cannot process single stock data", zap.Any("error", err))
 		return
 	}
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	DataResponse(w, res)
 }
 
 func singleStockDataEOD(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +51,36 @@ func singleStockDataEOD(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("cannot fetch EOD for symbol", zap.Any("error", err))
 		return
 	}
-	log.Print(res)
+	DataResponse(w, res)
+}
+
+func GetSplits(w http.ResponseWriter, r *http.Request) {
+	sym := r.FormValue("symbol")
+	res, err := ticker.GetCompanySplits(sym)
+	if err != nil {
+		logger.Debug("cannot fetch EOD for symbol", zap.Any("error", err))
+		return
+	}
+	DataResponse(w, res)
+}
+
+func GetDividends(w http.ResponseWriter, r *http.Request) {
+	sym := r.FormValue("symbol")
+	res, err := ticker.GetCompanyDividends(sym)
+	if err != nil {
+		logger.Debug("cannot fetch EOD for symbol", zap.Any("error", err))
+		return
+	}
+	DataResponse(w, res)
+}
+
+func GetIntraday(w http.ResponseWriter, r *http.Request) {
+	sym := r.FormValue("symbol")
+	res, err := ticker.GetCompanyIntraday(sym)
+	if err != nil {
+		logger.Debug("cannot fetch EOD for symbol", zap.Any("error", err))
+		return
+	}
 	DataResponse(w, res)
 }
 
@@ -74,6 +101,9 @@ func main() {
 	r.HandleFunc("/stocks", allstocksdata)
 	r.HandleFunc("/stocks/single", singleStockData)
 	r.HandleFunc("/stocks/single/eod", singleStockDataEOD)
+	r.HandleFunc("/stocks/splits", GetSplits)
+	r.HandleFunc("/stocks/dividends", GetDividends)
+	r.HandleFunc("/stocks/intraday", GetIntraday)
 	err := http.ListenAndServe(":9900", r)
 	if err != nil {
 		log.Fatal(err)

@@ -13,6 +13,8 @@ type StockTicker interface {
 	GetAllTickers() (allStockTickers, error)
 	GetCompanyTicker(companyTicker string) (allTickers, error)
 	GetCompanyEOD(symbol string) (*ParentStockEOD, error)
+	GetCompanySplits(symbol string) (*Split, error)
+	GetCompanyIntraday(symbol string) (*Intraday, error)
 }
 
 var _ StockTicker = &stockTickers{}
@@ -83,6 +85,43 @@ type EOD struct {
 	Symbol      string  `json:"symbol"`
 	Exchange    string  `json:"exchange"`
 	Date        string  `json:"date"`
+}
+
+type Split struct {
+	Data []struct {
+		Date        string  `json:"date"`
+		SplitFactor float64 `json:"split_factor"`
+		Symbol      string  `json:"symbol"`
+	} `json:"data"`
+}
+
+type Dividend struct {
+	Data []struct {
+		Date     string  `json:"date"`
+		Dividend float64 `json:"dividend"`
+		Symbol   string  `json:"symbol"`
+	} `json:"data"`
+}
+
+type Intraday struct {
+	Data struct {
+		Name        string `json:"name"`
+		Symbol      string `json:"symbol"`
+		Country     string `json:"country"`
+		HasIntraday bool   `json:"has_intraday"`
+		HasEOD      bool   `json:"has_eod"`
+		Intraday    []struct {
+			Open     float64 `json:"open"`
+			High     float64 `json:"high"`
+			Low      float64 `json:"low"`
+			Last     string  `json:"last"`
+			Close    string  `json:"close"`
+			Volume   string  `json:"volume"`
+			Date     string  `json:"date"`
+			Symbol   string  `json:"symbol"`
+			Exchange string  `json:"exchange"`
+		} `json:"intraday"`
+	} `json:"data"`
 }
 
 func NewStockTicker(logger *zap.Logger, stockclient Stockclient) *stockTickers {
@@ -165,7 +204,77 @@ func (s *stockTickers) GetCompanyEOD(symbol string) (*ParentStockEOD, error) {
 		s.logger.Debug("error unmarshalling data", zap.Any("error", datast))
 		return nil, datast
 	}
-	log.Print(val)
-	log.Print("body", string(req))
+	return &val, nil
+}
+
+func (s *stockTickers) GetCompanySplits(symbol string) (*Split, error) {
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/splits?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	if err != nil {
+		s.logger.Debug("error making request", zap.Any("error", err))
+		return nil, err
+	}
+	var val Split
+	datast := json.Unmarshal(req, &val)
+	if datast != nil {
+		s.logger.Debug("error unmarshalling data", zap.Any("error", datast))
+		return nil, datast
+	}
+	return &val, nil
+}
+
+func (s *stockTickers) GetCompanyDividends(symbol string) (*Dividend, error) {
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/dividends?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	if err != nil {
+		s.logger.Debug("error making request", zap.Any("error", err))
+		return nil, err
+	}
+	log.Print("dividends", string(req))
+	var val Dividend
+	datast := json.Unmarshal(req, &val)
+	if datast != nil {
+		s.logger.Debug("error unmarshalling data", zap.Any("error", datast))
+		return nil, datast
+	}
+	return &val, nil
+}
+
+func (s *stockTickers) GetCompanyEODLatest(symbol string) (*ParentStockEOD, error) {
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/eod/latest?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	if err != nil {
+		s.logger.Debug("error making request", zap.Any("error", err))
+		return nil, err
+	}
+	var val ParentStockEOD
+	datast := json.Unmarshal(req, &val)
+	if datast != nil {
+		s.logger.Debug("error unmarshalling data", zap.Any("error", datast))
+		return nil, datast
+	}
+	return &val, nil
+}
+
+func (s *stockTickers) GetCompanyIntraday(symbol string) (*Intraday, error) {
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	if err != nil {
+		s.logger.Debug("error making request", zap.Any("error", err))
+		return nil, err
+	}
+	var val Intraday
+	_ = json.Unmarshal(req, &val)
+	return &val, nil
+}
+
+func (s *stockTickers) GetCompanyIntradayLatest(symbol string) (*ParentStockEOD, error) {
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday/latest?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	if err != nil {
+		s.logger.Debug("error making request", zap.Any("error", err))
+		return nil, err
+	}
+	var val ParentStockEOD
+	datast := json.Unmarshal(req, &val)
+	if datast != nil {
+		s.logger.Debug("error unmarshalling data", zap.Any("error", datast))
+		return nil, datast
+	}
 	return &val, nil
 }
