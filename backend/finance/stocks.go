@@ -21,7 +21,7 @@ var _ StockTicker = &stockTickers{}
 
 type stockTickers struct {
 	logger      *zap.Logger
-	stockClient Stockclient
+	stockClient RequestClient
 }
 
 type allStockTickers struct {
@@ -124,7 +124,7 @@ type Intraday struct {
 	} `json:"data"`
 }
 
-func NewStockTicker(logger *zap.Logger, stockclient Stockclient) *stockTickers {
+func NewStockTicker(logger *zap.Logger, stockclient RequestClient) *stockTickers {
 	return &stockTickers{
 		logger:      logger,
 		stockClient: stockclient,

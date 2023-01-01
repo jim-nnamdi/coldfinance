@@ -4,5 +4,9 @@ This is the official backend of the coldfinance platform, basically we aim to bu
 # Tech Stack
 Golang and React(Typescript)
 
+# Data Stack
+- Stocks ```(marketstack.com)```
+- Crypto ```(coinlayer.com)```
+
 # Copyright
 All rights reserved &copy; info@coldfinance.co

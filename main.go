@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	stockc = finance.NewStockClient(&zap.Logger{})
-	ticker = finance.NewStockTicker(&zap.Logger{}, stockc)
+	reqc   = finance.NewDataClient(&zap.Logger{})
+	ticker = finance.NewStockTicker(&zap.Logger{}, reqc)
+	crypto = finance.NewCryptos(&zap.Logger{}, reqc)
 	logger = zap.NewNop()
 )
 
@@ -84,6 +85,10 @@ func GetIntraday(w http.ResponseWriter, r *http.Request) {
 	DataResponse(w, res)
 }
 
+func GetAllCryptoData(w http.ResponseWriter, r *http.Request) {
+	crypto.GetAllCryptoData()
+}
+
 func main() {
 	log.Print("server running on 9900 ...")
 	r := http.NewServeMux()
@@ -104,6 +109,9 @@ func main() {
 	r.HandleFunc("/stocks/splits", GetSplits)
 	r.HandleFunc("/stocks/dividends", GetDividends)
 	r.HandleFunc("/stocks/intraday", GetIntraday)
+
+	// crypto
+	r.HandleFunc("/coins", GetAllCryptoData)
 	err := http.ListenAndServe(":9900", r)
 	if err != nil {
 		log.Fatal(err)
