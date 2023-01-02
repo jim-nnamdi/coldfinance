@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jim-nnamdi/coldfinance/backend/admin"
@@ -15,8 +16,9 @@ import (
 )
 
 var (
-	stockc = finance.NewStockClient(&zap.Logger{})
-	ticker = finance.NewStockTicker(&zap.Logger{}, stockc)
+	reqc   = finance.NewDataClient(&zap.Logger{})
+	ticker = finance.NewStockTicker(&zap.Logger{}, reqc)
+	crypto = finance.NewCryptos(&zap.Logger{}, reqc)
 	logger = zap.NewNop()
 )
 
@@ -84,27 +86,74 @@ func GetIntraday(w http.ResponseWriter, r *http.Request) {
 	DataResponse(w, res)
 }
 
+func GetAllCryptoData(w http.ResponseWriter, r *http.Request) {
+	allcoins, err := crypto.GetAllCryptoData()
+	if err != nil {
+		logger.Debug("error fetching coins data", zap.Any("error", err))
+		return
+	}
+	DataResponse(w, allcoins)
+}
+
+func GetLiveCryptoData(w http.ResponseWriter, r *http.Request) {
+	res, err := crypto.GetLiveCryptoData()
+	if err != nil {
+		logger.Debug("error fetching live stats ...", zap.Any("error", err))
+		return
+	}
+	DataResponse(w, res)
+}
+
+func ConvertCrypto(w http.ResponseWriter, r *http.Request) {
+	coinfrom := r.FormValue("coinfrom")
+	cointo := r.FormValue("cointo")
+	amount := r.FormValue("amount")
+	amtFloat, _ := strconv.Atoi(amount)
+	res, err := crypto.ConvertCrypto(coinfrom, cointo, amtFloat)
+	if err != nil {
+		logger.Debug("error converting crypto", zap.Any("error", err))
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"converted_from":    coinfrom,
+		"converted_to":      cointo,
+		"amount_to_convert": amtFloat,
+		"amount_to_receive": res,
+	})
+}
+
 func main() {
 	log.Print("server running on 9900 ...")
-	r := http.NewServeMux()
-	r.HandleFunc("/users", users.GetAllUsers)
-	r.HandleFunc("/register", users.Register)
-	r.HandleFunc("/login", users.Login)
+	route := http.NewServeMux()
 
-	r.HandleFunc("/posts", content.GetAllPosts)
-	r.HandleFunc("/post", content.GetPost)
-	r.HandleFunc("/add/post", content.AddNewPost)
+	// users
+	route.HandleFunc("/users", users.GetAllUsers)
+	route.HandleFunc("/register", users.Register)
+	route.HandleFunc("/login", users.Login)
 
-	r.HandleFunc("/admin", admin.GetAllData)
+	// contents
+	route.HandleFunc("/posts", content.GetAllPosts)
+	route.HandleFunc("/post", content.GetPost)
+	route.HandleFunc("/add/post", content.AddNewPost)
 
 	// stocks
-	r.HandleFunc("/stocks", allstocksdata)
-	r.HandleFunc("/stocks/single", singleStockData)
-	r.HandleFunc("/stocks/single/eod", singleStockDataEOD)
-	r.HandleFunc("/stocks/splits", GetSplits)
-	r.HandleFunc("/stocks/dividends", GetDividends)
-	r.HandleFunc("/stocks/intraday", GetIntraday)
-	err := http.ListenAndServe(":9900", r)
+	route.HandleFunc("/stocks", allstocksdata)
+	route.HandleFunc("/stocks/single", singleStockData)
+	route.HandleFunc("/stocks/single/eod", singleStockDataEOD)
+	route.HandleFunc("/stocks/splits", GetSplits)
+	route.HandleFunc("/stocks/dividends", GetDividends)
+	route.HandleFunc("/stocks/intraday", GetIntraday)
+
+	// crypto
+	route.HandleFunc("/coins", GetAllCryptoData)
+	route.HandleFunc("/coins/live", GetLiveCryptoData)
+	route.HandleFunc("/coins/convert", ConvertCrypto)
+
+	// admin
+	route.HandleFunc("/admin", admin.GetAllData)
+
+	err := http.ListenAndServe(":9900", route)
 	if err != nil {
 		log.Fatal(err)
 	}

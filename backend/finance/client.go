@@ -7,23 +7,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type Stockclient interface {
+type RequestClient interface {
 	MakeGetRequest(method string, url string) ([]byte, error)
 }
 
-var _ Stockclient = &dataclient{}
+var _ RequestClient = &Dataclient{}
 
-type dataclient struct {
+type Dataclient struct {
 	logger *zap.Logger
 }
 
-func NewStockClient(logger *zap.Logger) *dataclient {
-	return &dataclient{
+func NewDataClient(logger *zap.Logger) *Dataclient {
+	return &Dataclient{
 		logger: logger,
 	}
 }
 
-func (c *dataclient) MakeGetRequest(method string, url string) ([]byte, error) {
+func (c *Dataclient) MakeGetRequest(method string, url string) ([]byte, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		c.logger.Debug("error making get request", zap.Any("error", err.Error()))
