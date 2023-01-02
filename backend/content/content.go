@@ -25,6 +25,7 @@ type Postx struct {
 	Author   string `json:"author"`
 	Image    string `json:"image,omitempty"`
 	Approved int    `json:"approved"`
+	Category string `json:"category"`
 }
 
 var (
@@ -74,6 +75,7 @@ func GetSinglePost(slug string) (*Postx, error) {
 		&postmodel.Author,
 		&postmodel.Image,
 		&postmodel.Approved,
+		&postmodel.Category,
 	); err != nil {
 		coldfinancelog.Debug("error fetching & scanning posts", zap.String("error", err.Error()))
 		return nil, err
@@ -82,10 +84,10 @@ func GetSinglePost(slug string) (*Postx, error) {
 	return &postmodel, nil
 }
 
-func AddPost(title string, body string, author string) (bool, error) {
+func AddPost(title string, body string, author string, category string) (bool, error) {
 	split_title := strings.Split(title, " ")
 	genslug := strings.Join(split_title, "-")
-	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved) values(?,?,?,?,?,?)", title, body, genslug, author, "", 0)
+	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category) values(?,?,?,?,?,?)", title, body, genslug, author, "", 0, category)
 	if err != nil {
 		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
 		return false, err
@@ -121,8 +123,31 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(singlepost)
 }
 
+func GetPostByCategory(w http.ResponseWriter, r *http.Request) {
+	var (
+		post = &Postx{}
+		err  error
+	)
+	category := r.URL.Query().Get("category")
+	req := connection.Dbconn().QueryRow("select * from posts where category=?", category)
+	if err = req.Scan(
+		post.Id,
+		post.Title,
+		post.Body,
+		post.Slug,
+		post.Author,
+		post.Image,
+		post.Approved,
+	); err != nil {
+		coldfinancelog.Debug("cannot fetch post by category", zap.Any("error", err))
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(post)
+}
+
 func AddNewPost(w http.ResponseWriter, r *http.Request) {
-	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("author"))
+	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("author"), r.FormValue("category"))
 	if err != nil || !newpost {
 		coldfinancelog.Debug("cannot add new post", zap.Any("error", err))
 		return
