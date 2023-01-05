@@ -18,14 +18,15 @@ type Post interface {
 }
 
 type Postx struct {
-	Id       int    `json:"id"`
-	Title    string `json:"title"`
-	Body     string `json:"body"`
-	Slug     string `json:"slug"`
-	Author   string `json:"author"`
-	Image    string `json:"image,omitempty"`
-	Approved int    `json:"approved"`
-	Category string `json:"category"`
+	Id         int    `json:"id"`
+	Title      string `json:"title"`
+	Body       string `json:"body"`
+	Slug       string `json:"slug"`
+	Author     string `json:"author"`
+	Image      string `json:"image,omitempty"`
+	Approved   int    `json:"approved"`
+	Category   string `json:"category"`
+	DatePosted string `json:"dateposted"`
 }
 
 var (
@@ -76,6 +77,7 @@ func GetSinglePost(slug string) (*Postx, error) {
 		&postmodel.Image,
 		&postmodel.Approved,
 		&postmodel.Category,
+		&postmodel.DatePosted,
 	); err != nil {
 		coldfinancelog.Debug("error fetching & scanning posts", zap.String("error", err.Error()))
 		return nil, err
@@ -84,10 +86,10 @@ func GetSinglePost(slug string) (*Postx, error) {
 	return &postmodel, nil
 }
 
-func AddPost(title string, body string, author string, category string) (bool, error) {
+func AddPost(title string, body string, author string, category string, dateposted string) (bool, error) {
 	split_title := strings.Split(title, " ")
 	genslug := strings.Join(split_title, "-")
-	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category) values(?,?,?,?,?,?)", title, body, genslug, author, "", 0, category)
+	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category,dateposted) values(?,?,?,?,?,?,?)", title, body, genslug, author, "", 0, category, dateposted)
 	if err != nil {
 		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
 		return false, err
@@ -138,6 +140,8 @@ func GetPostByCategory(w http.ResponseWriter, r *http.Request) {
 		post.Author,
 		post.Image,
 		post.Approved,
+		post.Category,
+		post.DatePosted,
 	); err != nil {
 		coldfinancelog.Debug("cannot fetch post by category", zap.Any("error", err))
 		return
@@ -147,7 +151,7 @@ func GetPostByCategory(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddNewPost(w http.ResponseWriter, r *http.Request) {
-	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("author"), r.FormValue("category"))
+	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("author"), r.FormValue("category"), r.FormValue("dateposted"))
 	if err != nil || !newpost {
 		coldfinancelog.Debug("cannot add new post", zap.Any("error", err))
 		return
