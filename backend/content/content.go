@@ -29,6 +29,10 @@ type Postx struct {
 	DatePosted string `json:"dateposted"`
 }
 
+// handle image uploads to s3 bucket ? needs aws subscription.
+// because of aws costs we suspend blog image uploads for now
+// this is still a research Proj with no funding.
+
 var (
 	conn           = connection.Dbconn()
 	coldfinancelog = connection.Coldfinancelog()
