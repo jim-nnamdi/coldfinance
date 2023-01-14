@@ -3,9 +3,30 @@ package finance
 import (
 	"net/http"
 	"net/url"
+
+	"go.uber.org/zap"
 )
 
-func Mrequest(r *http.Request, path string) (*http.Request, error) {
+type NewClient interface {
+	Mrequest(r *http.Request, path string) (*http.Request, error)
+	Dorequest(req *http.Request) (*http.Response, error)
+}
+
+var _ NewClient = &NewC{}
+
+type NewC struct {
+	logger     *zap.Logger
+	httpClient *http.Client
+}
+
+func NewClients(logger *zap.Logger, httpclient *http.Client) *NewC {
+	return &NewC{
+		logger:     logger,
+		httpClient: httpclient,
+	}
+}
+
+func (nc *NewC) Mrequest(r *http.Request, path string) (*http.Request, error) {
 	var (
 		newreq *http.Request
 		err    error
@@ -28,9 +49,8 @@ func Mrequest(r *http.Request, path string) (*http.Request, error) {
 	return newreq, nil
 }
 
-func Dorequest(req *http.Request) (*http.Response, error) {
-	c := &http.Client{}
-	res, err := c.Do(req)
+func (nc *NewC) Dorequest(req *http.Request) (*http.Response, error) {
+	res, err := nc.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
