@@ -95,7 +95,7 @@ func GetSinglePost(slug string) (*Postx, error) {
 func AddPost(title string, body string, image string, author string, category string, dateposted string) (bool, error) {
 	split_title := strings.Split(title, " ")
 	genslug := strings.Join(split_title, "-")
-	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category,dateposted) values(?,?,?,?,?,?,?)", title, body, genslug, author, image, 1, category, dateposted)
+	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category,dateposted) values(?,?,?,?,?,?,?,?)", title, body, genslug, author, image, 1, category, dateposted)
 	if err != nil {
 		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
 		return false, err
@@ -169,7 +169,7 @@ func AddNewPost(w http.ResponseWriter, r *http.Request) {
 	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("image"), r.FormValue("author"), r.FormValue("category"), r.FormValue("dateposted"))
 	if err != nil || !newpost {
 		log.Print(err.Error())
-		coldfinancelog.Debug("cannot add new post", zap.Any("error", err))
+		coldfinancelog.Error("cannot add new post", zap.Any("error", err))
 		return
 	}
 	w.Header().Add("Content-Type", "application/json")
