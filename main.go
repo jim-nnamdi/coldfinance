@@ -136,6 +136,7 @@ func main() {
 	route.HandleFunc("/posts", content.GetAllPosts)
 	route.HandleFunc("/post", content.GetPost)
 	route.HandleFunc("/add/post", content.AddNewPost)
+	route.HandleFunc("/posts/category", content.GetPostByCategory)
 
 	// stocks
 	route.HandleFunc("/stocks", allstocksdata)

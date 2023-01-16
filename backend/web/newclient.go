@@ -1,4 +1,4 @@
-package finance
+package web
 
 import (
 	"net/http"

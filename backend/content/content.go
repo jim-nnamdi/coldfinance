@@ -26,7 +26,7 @@ type Postx struct {
 	Image      string `json:"image,omitempty"`
 	Approved   int    `json:"approved"`
 	Category   string `json:"category"`
-	DatePosted string `json:"dateposted"`
+	DatePosted string `json:"dateposted,omitempty"`
 }
 
 // handle image uploads to s3 bucket ? needs aws subscription.
@@ -56,6 +56,8 @@ func GetPosts() ([]Postx, error) {
 			&spost.Author,
 			&spost.Image,
 			&spost.Approved,
+			&spost.Category,
+			&spost.DatePosted,
 		)
 		if err != nil {
 			log.Print(err.Error())
@@ -90,10 +92,10 @@ func GetSinglePost(slug string) (*Postx, error) {
 	return &postmodel, nil
 }
 
-func AddPost(title string, body string, author string, category string, dateposted string) (bool, error) {
+func AddPost(title string, body string, image string, author string, category string, dateposted string) (bool, error) {
 	split_title := strings.Split(title, " ")
 	genslug := strings.Join(split_title, "-")
-	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category,dateposted) values(?,?,?,?,?,?,?)", title, body, genslug, author, "", 0, category, dateposted)
+	addpost, err := conn.Exec("insert into posts(title, body, slug, author, image, approved,category,dateposted) values(?,?,?,?,?,?,?)", title, body, genslug, author, image, 1, category, dateposted)
 	if err != nil {
 		coldfinancelog.Debug("could not create new post", zap.Any("error", err))
 		return false, err
@@ -114,6 +116,7 @@ func GetAllPosts(w http.ResponseWriter, r *http.Request) {
 		coldfinancelog.Debug("cannot fetch posts", zap.Any("error", err))
 		return
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(allposts)
 }
@@ -125,38 +128,47 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 		coldfinancelog.Debug("cannot fetch post with slug", zap.Any("error", err))
 		return
 	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(singlepost)
 }
 
 func GetPostByCategory(w http.ResponseWriter, r *http.Request) {
-	var (
-		post = &Postx{}
-		err  error
-	)
 	category := r.URL.Query().Get("category")
-	req := connection.Dbconn().QueryRow("select * from posts where category=?", category)
-	if err = req.Scan(
-		post.Id,
-		post.Title,
-		post.Body,
-		post.Slug,
-		post.Author,
-		post.Image,
-		post.Approved,
-		post.Category,
-		post.DatePosted,
-	); err != nil {
-		coldfinancelog.Debug("cannot fetch post by category", zap.Any("error", err))
+	req, err := connection.Dbconn().Query("select * from posts where category=?", category)
+	if err != nil {
+		log.Print(err.Error())
 		return
 	}
+	posts := make([]Postx, 0)
+	for req.Next() {
+		post := Postx{}
+		err := req.Scan(
+			&post.Id,
+			&post.Title,
+			&post.Body,
+			&post.Slug,
+			&post.Author,
+			&post.Image,
+			&post.Approved,
+			&post.Category,
+			&post.DatePosted,
+		)
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+		posts = append(posts, post)
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(posts)
 }
 
 func AddNewPost(w http.ResponseWriter, r *http.Request) {
-	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("author"), r.FormValue("category"), r.FormValue("dateposted"))
+	newpost, err := AddPost(r.FormValue("title"), r.FormValue("body"), r.FormValue("image"), r.FormValue("author"), r.FormValue("category"), r.FormValue("dateposted"))
 	if err != nil || !newpost {
+		log.Print(err.Error())
 		coldfinancelog.Debug("cannot add new post", zap.Any("error", err))
 		return
 	}
