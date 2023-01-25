@@ -39,7 +39,7 @@ var (
 )
 
 func GetPosts() ([]Postx, error) {
-	res, err := conn.Query("select * from posts where approved = 1 order by id desc limit 8")
+	res, err := conn.Query("select * from posts where approved = 1 order by id desc limit 9")
 	if err != nil {
 		log.Print(err.Error())
 		return nil, err
