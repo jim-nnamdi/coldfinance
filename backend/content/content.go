@@ -39,7 +39,7 @@ var (
 )
 
 func GetPosts() ([]Postx, error) {
-	res, err := conn.Query("select * from posts where approved = 1")
+	res, err := conn.Query("select * from posts where approved = 1 order by id desc limit 8")
 	if err != nil {
 		log.Print(err.Error())
 		return nil, err
@@ -135,7 +135,7 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 
 func GetPostByCategory(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
-	req, err := connection.Dbconn().Query("select * from posts where category=?", category)
+	req, err := connection.Dbconn().Query("select * from posts where category=? order by id desc", category)
 	if err != nil {
 		log.Print(err.Error())
 		return
