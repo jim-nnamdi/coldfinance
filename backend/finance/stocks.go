@@ -5,13 +5,15 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 type StockTicker interface {
 	GetAllTickers() (allStockTickers, error)
-	GetCompanyTicker(companyTicker string) (allTickers, error)
+	GetCompanyTicker(companyTicker string) (*allTickers, error)
 	GetCompanyEOD(symbol string) (*ParentStockEOD, error)
 	GetCompanySplits(symbol string) (*Split, error)
 	GetCompanyIntraday(symbol string) (*Intraday, error)
@@ -162,11 +164,17 @@ func (s *stockTickers) GetAllTickers() (allStockTickers, error) {
 	return val, nil
 }
 
-func (s *stockTickers) GetCompanyTicker(symbol string) (allTickers, error) {
-	req, err := http.NewRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"?access_key=214e04d7d20abb7cbd47894b00c2c334", nil)
+func (s *stockTickers) GetCompanyTicker(symbol string) (*allTickers, error) {
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := http.NewRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"?access_key="+accessKey, nil)
 	if err != nil {
 		s.logger.Debug("error fetching stock tickers", zap.Any("error", err.Error()))
-		return allTickers{}, err
+		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
@@ -175,25 +183,31 @@ func (s *stockTickers) GetCompanyTicker(symbol string) (allTickers, error) {
 	res, err := client.Do(req)
 	if err != nil {
 		s.logger.Debug("error", zap.String("error", err.Error()))
-		return allTickers{}, err
+		return nil, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		s.logger.Debug("error", zap.String("error", err.Error()))
-		return allTickers{}, err
+		return nil, err
 	}
 	var val allTickers
 	datast := json.Unmarshal(body, &val)
 	if datast != nil {
 		s.logger.Debug("error unmarshaling to struct", zap.Any("error", datast))
-		return allTickers{}, err
+		return nil, err
 	}
-	return val, nil
+	return &val, nil
 }
 
 func (s *stockTickers) GetCompanyEOD(symbol string) (*ParentStockEOD, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/eod?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/eod?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
@@ -208,7 +222,13 @@ func (s *stockTickers) GetCompanyEOD(symbol string) (*ParentStockEOD, error) {
 }
 
 func (s *stockTickers) GetCompanySplits(symbol string) (*Split, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/splits?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/splits?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
@@ -223,7 +243,13 @@ func (s *stockTickers) GetCompanySplits(symbol string) (*Split, error) {
 }
 
 func (s *stockTickers) GetCompanyDividends(symbol string) (*Dividend, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/dividends?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/dividends?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
@@ -239,7 +265,13 @@ func (s *stockTickers) GetCompanyDividends(symbol string) (*Dividend, error) {
 }
 
 func (s *stockTickers) GetCompanyEODLatest(symbol string) (*ParentStockEOD, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/eod/latest?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/eod/latest?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
@@ -254,7 +286,13 @@ func (s *stockTickers) GetCompanyEODLatest(symbol string) (*ParentStockEOD, erro
 }
 
 func (s *stockTickers) GetCompanyIntraday(symbol string) (*Intraday, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
@@ -265,7 +303,13 @@ func (s *stockTickers) GetCompanyIntraday(symbol string) (*Intraday, error) {
 }
 
 func (s *stockTickers) GetCompanyIntradayLatest(symbol string) (*ParentStockEOD, error) {
-	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday/latest?access_key=214e04d7d20abb7cbd47894b00c2c334")
+	err := godotenv.Load()
+	if err != nil {
+		s.logger.Error("error loading env file", zap.Error(err))
+		return nil, err
+	}
+	accessKey := os.Getenv("MARKETSTACK")
+	req, err := s.stockClient.MakeGetRequest(http.MethodGet, "http://api.marketstack.com/v1/tickers/"+symbol+"/intraday/latest?access_key="+accessKey)
 	if err != nil {
 		s.logger.Debug("error making request", zap.Any("error", err))
 		return nil, err
