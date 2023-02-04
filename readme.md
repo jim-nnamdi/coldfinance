@@ -1,5 +1,5 @@
 # ColdFinance Backend
-This is the official backend of the coldfinance platform, basically we aim to build features like the financial giant ```Bloomberg``` and it all starts from a content service platform where we would host financial news and give SBLs ```small business loans``` to our users.
+A Onepipe project that has different features crafted out from several APIs where you can interact with Crypto data, Stocks and General Finance. Blogs and more!
 
 # Tech Stack
 Golang and React(Typescript)
